@@ -210,6 +210,21 @@ export class ProcessingPipeline {
         extractedText = pdfResult.text;
         pageCount = pdfResult.pageCount;
 
+        // Generate and save thumbnail for PDF
+        try {
+          const thumb = await PdfExtractor.generateThumbnail(fileBuffer, 240);
+          if (thumb) {
+            const thumbKey = `thumb_${doc.id}_${Date.now()}`;
+            await FileStorageService.saveFile(thumbKey, thumb.blob, thumb.mimeType);
+            await db.documents.update(doc.id, {
+              thumbnailStorageKey: thumbKey,
+              thumbnailMimeType: thumb.mimeType,
+            });
+          }
+        } catch (thumbErr) {
+          console.warn('Background thumbnail generation warning:', thumbErr);
+        }
+
         // If PDF has no selectable text, attempt OCR on first page
         if (!pdfResult.hasSelectableText) {
           await this.updateJobStatus(jobId, 'ocr_in_progress', 60, doc.id);

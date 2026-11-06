@@ -21,7 +21,6 @@ export class PdfExtractor {
       const pdfjsLib = await import('pdfjs-dist');
       // Configure worker
       if (typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
-        // Point to unpkg or bundled worker
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version || '4.0.379'}/pdf.worker.min.mjs`;
       }
       this.pdfjs = pdfjsLib;
@@ -97,7 +96,6 @@ export class PdfExtractor {
     try {
       const decoder = new TextDecoder('utf-8', { fatal: false });
       const raw = decoder.decode(new Uint8Array(fileBuffer));
-      // Extract plaintext segments inside parentheses (BT ... ET)
       const textMatches = raw.match(/\(([^()]{3,})\)\s*T[jJ]/g) || [];
       const extracted = textMatches
         .map((m) => m.replace(/^\(/, '').replace(/\)\s*T[jJ]$/, ''))
@@ -150,6 +148,46 @@ export class PdfExtractor {
       return canvas;
     } catch (err) {
       console.warn('Failed to render PDF page to canvas:', err);
+      return null;
+    }
+  }
+
+  /**
+   * Generate a small thumbnail blob (JPEG) from the first page of a PDF
+   */
+  static async generateThumbnail(
+    fileBuffer: ArrayBuffer,
+    maxWidth: number = 240
+  ): Promise<{ blob: Blob; mimeType: string } | null> {
+    try {
+      const canvas = await this.renderPageToCanvas(fileBuffer, 1);
+      if (!canvas) return null;
+
+      const scale = maxWidth / canvas.width;
+      const thumbCanvas = document.createElement('canvas');
+      thumbCanvas.width = maxWidth;
+      thumbCanvas.height = Math.round(canvas.height * scale);
+
+      const ctx = thumbCanvas.getContext('2d');
+      if (!ctx) return null;
+
+      ctx.drawImage(canvas, 0, 0, thumbCanvas.width, thumbCanvas.height);
+
+      return new Promise((resolve) => {
+        thumbCanvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve({ blob, mimeType: 'image/jpeg' });
+            } else {
+              resolve(null);
+            }
+          },
+          'image/jpeg',
+          0.85
+        );
+      });
+    } catch (err) {
+      console.warn('PDF thumbnail generation failed:', err);
       return null;
     }
   }

@@ -72,6 +72,8 @@ export interface DocumentRecord {
   fileSize: number; // in bytes
   fileHash: string; // SHA-256 hex
   storageKey: string; // Key in OPFS / IndexedDB blob store
+  thumbnailStorageKey?: string | null; // Thumbnail image storage key
+  thumbnailMimeType?: string | null;
   categoryId: string;
   documentType: DocumentType;
   issueDate: string | null; // YYYY-MM-DD

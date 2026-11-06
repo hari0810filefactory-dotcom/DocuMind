@@ -20,6 +20,7 @@ import {
   ChevronRight,
   FolderInput,
   Flag,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { db, logActivity } from '../../services/database/db';
 import { FileStorageService } from '../../services/storage/fileStorage';
@@ -33,6 +34,49 @@ interface DocumentsViewProps {
   onOpenUpload: () => void;
   onSelectDocument: (doc: DocumentRecord) => void;
 }
+
+/**
+ * Thumbnail Preview Component that loads blob URLs asynchronously for document thumbnails
+ */
+const DocumentThumbnail: React.FC<{ doc: DocumentRecord }> = ({ doc }) => {
+  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (doc.thumbnailStorageKey) {
+      FileStorageService.getFile(doc.thumbnailStorageKey, doc.thumbnailMimeType || 'image/jpeg').then(
+        (blob) => {
+          if (blob && isMounted) {
+            const url = URL.createObjectURL(blob);
+            setThumbUrl(url);
+          }
+        }
+      );
+    }
+    return () => {
+      isMounted = false;
+      if (thumbUrl) {
+        URL.revokeObjectURL(thumbUrl);
+      }
+    };
+  }, [doc.thumbnailStorageKey]);
+
+  if (thumbUrl) {
+    return (
+      <img
+        src={thumbUrl}
+        alt={doc.title}
+        className="w-8 h-10 object-cover rounded shadow-xs border border-slate-200 dark:border-slate-800 shrink-0 bg-white"
+      />
+    );
+  }
+
+  return (
+    <div className="w-8 h-10 rounded bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0 border border-blue-500/20">
+      <FileText className="w-4 h-4" />
+    </div>
+  );
+};
 
 export const DocumentsView: React.FC<DocumentsViewProps> = ({
   workspaceId,
@@ -166,6 +210,9 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
           const doc = await db.documents.get(docId);
           if (doc) {
             await FileStorageService.deleteFile(doc.storageKey);
+            if (doc.thumbnailStorageKey) {
+              await FileStorageService.deleteFile(doc.thumbnailStorageKey);
+            }
             await db.documents.delete(docId);
             await db.documentText.where('documentId').equals(docId).delete();
             await db.documentFields.where('documentId').equals(docId).delete();
@@ -421,6 +468,9 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
   const permanentlyDelete = async (doc: DocumentRecord, e: React.MouseEvent) => {
     e.stopPropagation();
     await FileStorageService.deleteFile(doc.storageKey);
+    if (doc.thumbnailStorageKey) {
+      await FileStorageService.deleteFile(doc.thumbnailStorageKey);
+    }
     await db.documents.delete(doc.id);
     await db.documentText.where('documentId').equals(doc.id).delete();
     await db.documentFields.where('documentId').equals(doc.id).delete();
@@ -726,22 +776,27 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
                       </div>
                     </td>
 
-                    {/* Title & Metadata with Follow-up Visual Indicator */}
-                    <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-slate-100 max-w-[220px] truncate">
-                      <div className="flex items-center gap-1.5 truncate">
-                        <span className="truncate font-semibold">{doc.title}</span>
-                        {doc.isFlagged && (
-                          <span
-                            title="Flagged for follow-up"
-                            className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1 py-0.2 rounded-xs shrink-0"
-                          >
-                            <Flag className="w-2.5 h-2.5 fill-current" />
-                            <span>Follow-up</span>
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[10px] text-slate-400 truncate">
-                        {doc.originalFileName} · {(doc.fileSize / 1024).toFixed(0)} KB
+                    {/* Title & Metadata with Thumbnail and Follow-up Indicator */}
+                    <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-slate-100 max-w-[260px]">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <DocumentThumbnail doc={doc} />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 truncate">
+                            <span className="truncate font-semibold">{doc.title}</span>
+                            {doc.isFlagged && (
+                              <span
+                                title="Flagged for follow-up"
+                                className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1 py-0.2 rounded-xs shrink-0"
+                              >
+                                <Flag className="w-2.5 h-2.5 fill-current" />
+                                <span>Follow-up</span>
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-slate-400 truncate">
+                            {doc.originalFileName} · {(doc.fileSize / 1024).toFixed(0)} KB
+                          </div>
+                        </div>
                       </div>
                     </td>
 
@@ -855,9 +910,7 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
                           <Square className="w-4 h-4 text-slate-400" />
                         )}
                       </button>
-                      <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center">
-                        <FileText className="w-3.5 h-3.5" />
-                      </div>
+                      <DocumentThumbnail doc={doc} />
                     </div>
                     <div className="flex items-center gap-1">
                       <button
