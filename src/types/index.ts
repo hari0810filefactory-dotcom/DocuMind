@@ -81,6 +81,8 @@ export interface DocumentRecord {
   isFavorite: boolean;
   isArchived: boolean;
   isDeleted: boolean; // In trash
+  isFlagged?: boolean; // Flagged for follow-up
+  flaggedAt?: string | null;
   notes?: string;
   createdAt: string;
   updatedAt: string;

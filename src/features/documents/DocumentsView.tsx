@@ -19,6 +19,7 @@ import {
   Loader2,
   ChevronRight,
   FolderInput,
+  Flag,
 } from 'lucide-react';
 import { db, logActivity } from '../../services/database/db';
 import { FileStorageService } from '../../services/storage/fileStorage';
@@ -44,6 +45,7 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
+  const [filterFollowUpOnly, setFilterFollowUpOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
@@ -104,8 +106,11 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
 
   const catMap = new Map(categories.map((c) => [c.id, c.name]));
 
-  // Client search and category filtering
+  // Client search, category, and follow-up filtering
   const filteredDocs = documents.filter((doc) => {
+    if (filterFollowUpOnly && !doc.isFlagged) {
+      return false;
+    }
     if (selectedCategoryFilter !== 'all' && doc.categoryId !== selectedCategoryFilter) {
       return false;
     }
@@ -342,6 +347,67 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
     loadDocuments();
   };
 
+  const toggleFlag = async (doc: DocumentRecord, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = !doc.isFlagged;
+    const now = new Date().toISOString();
+    await db.documents.update(doc.id, {
+      isFlagged: next,
+      flaggedAt: next ? now : null,
+      updatedAt: now,
+    });
+    await logActivity(
+      doc.workspaceId,
+      'user',
+      next ? 'Flagged document for follow-up' : 'Removed follow-up flag',
+      doc.id,
+      doc.title
+    );
+    loadDocuments();
+  };
+
+  const executeBatchFlag = async (flagState: boolean) => {
+    if (selectedDocIds.size === 0) return;
+    setIsBatchProcessing(true);
+    setBatchActionType('flag');
+    const idsToUpdate = Array.from(selectedDocIds);
+
+    try {
+      const now = new Date().toISOString();
+      for (const docId of idsToUpdate) {
+        await db.documents.update(docId, {
+          isFlagged: flagState,
+          flaggedAt: flagState ? now : null,
+          updatedAt: now,
+        });
+      }
+
+      await logActivity(
+        workspaceId,
+        'user',
+        flagState ? 'Flagged batch documents for follow-up' : 'Removed follow-up flags from batch documents',
+        workspaceId,
+        `${flagState ? 'Flagged' : 'Unflagged'} ${idsToUpdate.length} document(s)`
+      );
+
+      setNotification({
+        type: 'success',
+        message: `${flagState ? 'Flagged' : 'Unflagged'} ${idsToUpdate.length} document(s) for follow-up.`,
+      });
+
+      clearSelection();
+      await loadDocuments();
+    } catch (err: any) {
+      setNotification({
+        type: 'error',
+        message: `Batch flag failed: ${err.message}`,
+      });
+    } finally {
+      setIsBatchProcessing(false);
+      setBatchActionType(null);
+    }
+  };
+
   const restoreFromTrash = async (docId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     await db.documents.update(docId, {
@@ -512,6 +578,22 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
               </option>
             ))}
           </select>
+
+          {/* Quick Follow-up filter toggle */}
+          <button
+            onClick={() => setFilterFollowUpOnly((prev) => !prev)}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors shrink-0 ${
+              filterFollowUpOnly
+                ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300'
+                : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+            title="Filter documents flagged for follow-up"
+          >
+            <Flag className={`w-3 h-3 ${filterFollowUpOnly ? 'fill-current text-amber-500' : 'text-slate-400'}`} />
+            <span>
+              Follow-up ({documents.filter((d) => d.isFlagged).length})
+            </span>
+          </button>
         </div>
 
         {/* View Switcher: Table vs Grid */}
@@ -578,7 +660,7 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
                     )}
                   </button>
                 </th>
-                <th className="py-2.5 px-2 w-7"></th>
+                <th className="py-2.5 px-2 w-14"></th>
                 <th className="py-2.5 px-3">Title &amp; File</th>
                 <th className="py-2.5 px-3">Type</th>
                 <th className="py-2.5 px-3">Category</th>
@@ -618,21 +700,46 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
                       </button>
                     </td>
 
-                    {/* Favorite Star */}
+                    {/* Favorite Star & Follow-up Flag */}
                     <td className="py-2.5 px-2">
-                      <button
-                        onClick={(e) => toggleFavorite(doc, e)}
-                        className={`text-slate-300 hover:text-amber-400 transition-colors ${
-                          doc.isFavorite ? 'text-amber-400' : ''
-                        }`}
-                      >
-                        <Star className="w-3.5 h-3.5 fill-current" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={(e) => toggleFavorite(doc, e)}
+                          className={`text-slate-300 hover:text-amber-400 transition-colors p-0.5 ${
+                            doc.isFavorite ? 'text-amber-400' : ''
+                          }`}
+                          title={doc.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                        >
+                          <Star className="w-3.5 h-3.5 fill-current" />
+                        </button>
+                        <button
+                          onClick={(e) => toggleFlag(doc, e)}
+                          className={`transition-colors p-0.5 rounded-xs ${
+                            doc.isFlagged
+                              ? 'text-amber-500'
+                              : 'text-slate-300 dark:text-slate-700 hover:text-amber-500'
+                          }`}
+                          title={doc.isFlagged ? 'Flagged for follow-up (Click to remove)' : 'Flag for follow-up'}
+                        >
+                          <Flag className={`w-3.5 h-3.5 ${doc.isFlagged ? 'fill-current' : ''}`} />
+                        </button>
+                      </div>
                     </td>
 
-                    {/* Title & Metadata */}
-                    <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-slate-100 max-w-[200px] truncate">
-                      <div className="truncate font-semibold">{doc.title}</div>
+                    {/* Title & Metadata with Follow-up Visual Indicator */}
+                    <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-slate-100 max-w-[220px] truncate">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <span className="truncate font-semibold">{doc.title}</span>
+                        {doc.isFlagged && (
+                          <span
+                            title="Flagged for follow-up"
+                            className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1 py-0.2 rounded-xs shrink-0"
+                          >
+                            <Flag className="w-2.5 h-2.5 fill-current" />
+                            <span>Follow-up</span>
+                          </span>
+                        )}
+                      </div>
                       <div className="text-[10px] text-slate-400 truncate">
                         {doc.originalFileName} · {(doc.fileSize / 1024).toFixed(0)} KB
                       </div>
@@ -729,6 +836,8 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
                 className={`p-4 rounded-xl border bg-white dark:bg-slate-900 shadow-xs cursor-pointer transition-all flex flex-col justify-between relative ${
                   isSelected
                     ? 'border-blue-500 ring-1 ring-blue-500/50 bg-blue-50/20 dark:bg-blue-950/20'
+                    : doc.isFlagged
+                    ? 'border-amber-400/80 dark:border-amber-500/40 hover:border-amber-500'
                     : 'border-slate-200 dark:border-slate-800 hover:border-blue-500/50'
                 }`}
               >
@@ -750,18 +859,43 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
                         <FileText className="w-3.5 h-3.5" />
                       </div>
                     </div>
-                    <button
-                      onClick={(e) => toggleFavorite(doc, e)}
-                      className={`text-slate-300 hover:text-amber-400 transition-colors ${
-                        doc.isFavorite ? 'text-amber-400' : ''
-                      }`}
-                    >
-                      <Star className="w-3.5 h-3.5 fill-current" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={(e) => toggleFlag(doc, e)}
+                        className={`p-1 transition-colors ${
+                          doc.isFlagged
+                            ? 'text-amber-500'
+                            : 'text-slate-300 dark:text-slate-700 hover:text-amber-400'
+                        }`}
+                        title={doc.isFlagged ? 'Flagged for follow-up (Click to remove)' : 'Flag for follow-up'}
+                      >
+                        <Flag className={`w-3.5 h-3.5 ${doc.isFlagged ? 'fill-current' : ''}`} />
+                      </button>
+                      <button
+                        onClick={(e) => toggleFavorite(doc, e)}
+                        className={`text-slate-300 hover:text-amber-400 transition-colors p-1 ${
+                          doc.isFavorite ? 'text-amber-400' : ''
+                        }`}
+                        title={doc.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                      >
+                        <Star className="w-3.5 h-3.5 fill-current" />
+                      </button>
+                    </div>
                   </div>
-                  <h3 className="font-semibold text-xs text-slate-900 dark:text-slate-100 truncate">
-                    {doc.title}
-                  </h3>
+                  <div className="flex items-center gap-1.5 truncate">
+                    <h3 className="font-semibold text-xs text-slate-900 dark:text-slate-100 truncate">
+                      {doc.title}
+                    </h3>
+                    {doc.isFlagged && (
+                      <span
+                        title="Flagged for follow-up"
+                        className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1 py-0.2 rounded-xs shrink-0"
+                      >
+                        <Flag className="w-2 h-2 fill-current" />
+                        <span>Follow-up</span>
+                      </span>
+                    )}
+                  </div>
                   {/* Zero-Pill Unboxed Metadata */}
                   <div className="text-[11px] text-slate-400 mt-1 space-y-0.5">
                     <div className="truncate">{doc.documentType}</div>
@@ -836,6 +970,17 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
                 <Download className="w-3.5 h-3.5 text-emerald-400" />
               )}
               <span>Export ZIP</span>
+            </button>
+
+            {/* Batch Flag for follow-up */}
+            <button
+              onClick={() => executeBatchFlag(true)}
+              disabled={isBatchProcessing}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 transition-colors whitespace-nowrap disabled:opacity-50"
+              title="Flag selected documents for follow-up"
+            >
+              <Flag className="w-3.5 h-3.5 text-amber-400" />
+              <span>Flag</span>
             </button>
 
             {/* Batch Archive (toggle) */}

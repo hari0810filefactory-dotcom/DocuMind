@@ -16,6 +16,7 @@ import {
   ExternalLink,
   Edit2,
   Save,
+  Flag,
 } from 'lucide-react';
 import { db, logActivity } from '../../services/database/db';
 import { FileStorageService } from '../../services/storage/fileStorage';
@@ -111,6 +112,24 @@ export const DocumentPreviewDrawer: React.FC<DocumentPreviewDrawerProps> = ({
     onDocumentUpdated();
   };
 
+  const toggleFlagForFollowUp = async () => {
+    const next = !doc.isFlagged;
+    const now = new Date().toISOString();
+    await db.documents.update(doc.id, {
+      isFlagged: next,
+      flaggedAt: next ? now : null,
+      updatedAt: now,
+    });
+    await logActivity(
+      doc.workspaceId,
+      'user',
+      next ? 'Flagged document for follow-up' : 'Removed follow-up flag',
+      doc.id,
+      doc.title
+    );
+    onDocumentUpdated();
+  };
+
   const toggleArchive = async () => {
     const next = !doc.isArchived;
     await db.documents.update(doc.id, {
@@ -202,6 +221,19 @@ export const DocumentPreviewDrawer: React.FC<DocumentPreviewDrawerProps> = ({
 
         {/* Right Action Icons */}
         <div className="flex items-center gap-1.5">
+          <button
+            onClick={toggleFlagForFollowUp}
+            className={`p-1.5 rounded-md transition-colors ${
+              doc.isFlagged
+                ? 'text-amber-500 bg-amber-500/10 hover:bg-amber-500/20'
+                : 'text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+            title={doc.isFlagged ? 'Remove follow-up flag' : 'Flag for follow-up'}
+            aria-label="Flag for follow-up"
+          >
+            <Flag className={`w-4 h-4 ${doc.isFlagged ? 'fill-current' : ''}`} />
+          </button>
+
           <button
             onClick={toggleFavorite}
             className={`p-1.5 rounded-md transition-colors ${
@@ -298,6 +330,57 @@ export const DocumentPreviewDrawer: React.FC<DocumentPreviewDrawerProps> = ({
 
       {/* Tab Contents */}
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
+        {/* Flag for Follow-up Status & Toggle Switch */}
+        <div className={`flex items-center justify-between p-3 rounded-xl border text-xs transition-colors ${
+          doc.isFlagged
+            ? 'bg-amber-50/70 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40'
+            : 'bg-slate-50/70 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800'
+        }`}>
+          <div className="flex items-center gap-2.5 min-w-0 pr-3">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+              doc.isFlagged
+                ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                : 'bg-slate-200 dark:bg-slate-800 text-slate-400'
+            }`}>
+              <Flag className={`w-4 h-4 ${doc.isFlagged ? 'fill-current' : ''}`} />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="font-semibold text-slate-900 dark:text-slate-100">
+                  {doc.isFlagged ? 'Flagged for Follow-up' : 'Flag for Follow-up'}
+                </span>
+                {doc.isFlagged && (
+                  <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-sm">
+                    Action Required
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                {doc.isFlagged
+                  ? `Marked for attention${doc.flaggedAt ? ` · ${new Date(doc.flaggedAt).toLocaleDateString()}` : ''}`
+                  : 'Track pending reviews, signatures, or renewals'}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            role="switch"
+            aria-checked={Boolean(doc.isFlagged)}
+            onClick={toggleFlagForFollowUp}
+            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
+              doc.isFlagged ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-700'
+            }`}
+            title={doc.isFlagged ? 'Unflag document' : 'Flag document for follow-up'}
+          >
+            <span
+              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                doc.isFlagged ? 'translate-x-4' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
+
         {/* TAB 1: File Preview */}
         {activeTab === 'preview' && (
           <div className="space-y-4">
