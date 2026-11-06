@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DocuMind</title>
+    <script>
+      // Single Page App redirect for GitHub Pages
+      var pathSegmentsToKeep = 0;
+      var l = window.location;
+      if (l.search) {
+        var q = {};
+        l.search.slice(1).split('&').forEach(function(v) {
+          var k = v.split('=');
+          q[k[0]] = k[1] && decodeURIComponent(k[1].replace(/\+/g, ' '));
+        });
+        if (q.p !== undefined) {
+          window.history.replaceState(null, null,
+            l.pathname.slice(0, -1) + (q.p || '') +
+            (l.hash ? '#' + l.hash : '')
+          );
+        }
+      }
+    </script>
+    <meta http-equiv="refresh" content="0;URL='./'" />
+  </head>
+  <body>
+    <div style="background: #090d16; color: #f8fafc; height: 100vh; display: flex; align-items: center; justify-content: center; font-family: sans-serif;">
+      Redirecting to DocuMind...
+    </div>
+  </body>
+</html>
