@@ -1,0 +1,6 @@
+{
+  "name": "DocuMind",
+  "description": "Independent offline-first intelligent document management platform with local OCR, PDF extraction, encryption, deterministic classification, and optional Gemini AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

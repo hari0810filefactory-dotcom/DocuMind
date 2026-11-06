@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0f1d"/>
+      <stop offset="100%" stop-color="#141c2e"/>
+    </linearGradient>
+    <linearGradient id="docGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="50%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="foldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#93c5fd"/>
+    </linearGradient>
+  </defs>
+  <!-- Background with subtle squircle border -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect x="4" y="4" width="504" height="504" rx="108" stroke="#3b82f6" stroke-opacity="0.3" stroke-width="8"/>
+  
+  <!-- Outer Document Card with folded corner -->
+  <path d="M144 104 C144 90.745 154.745 80 168 80 L304 80 L368 144 L368 408 C368 421.255 357.255 432 344 432 L168 432 C154.745 432 144 421.255 144 408 Z" fill="#1e293b" stroke="#334155" stroke-width="8" stroke-linejoin="round"/>
+  
+  <!-- Folded corner tab -->
+  <path d="M304 80 L304 144 L368 144 Z" fill="url(#foldGrad)"/>
+  
+  <!-- Intelligent Document Lines / Nodes -->
+  <rect x="184" y="160" width="100" height="12" rx="6" fill="#64748b"/>
+  <rect x="184" y="196" width="144" height="12" rx="6" fill="#475569"/>
+  <rect x="184" y="232" width="128" height="12" rx="6" fill="#475569"/>
+  
+  <!-- DocuMind Neural / Vault Crest in lower half -->
+  <circle cx="256" cy="324" r="52" fill="url(#docGrad)"/>
+  <!-- Lock / Vault keyhole center -->
+  <circle cx="256" cy="314" r="14" fill="#0f172a"/>
+  <path d="M250 318 L262 318 L266 338 L246 338 Z" fill="#0f172a"/>
+  
+  <!-- Intelligence Orbit Nodes -->
+  <circle cx="204" cy="290" r="7" fill="#60a5fa"/>
+  <circle cx="308" cy="290" r="7" fill="#818cf8"/>
+  <circle cx="256" cy="392" r="7" fill="#a78bfa"/>
+  <path d="M204 290 L256 324 L308 290 M256 324 L256 392" stroke="#ffffff" stroke-opacity="0.4" stroke-width="3" stroke-dasharray="4 4"/>
+</svg>

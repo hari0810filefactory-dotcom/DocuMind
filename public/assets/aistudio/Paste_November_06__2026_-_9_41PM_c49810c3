@@ -1,0 +1,998 @@
+
+PROJECT: DOCUMIND
+PRODUCT: Independent Offline-First Intelligent Document Management Platform
+TAGLINE: Your Documents. Organized. Understood. Always Accessible.
+
+YOUR ROLE
+
+Act as a principal software architect, senior full-stack engineer, cybersecurity engineer, UX/UI designer, database architect, and QA engineer.
+
+Build DocuMind as a real, functional, premium-quality, commercial-grade document management application.
+
+This is an independent product. It must have its own identity, architecture, data model, storage, security, and future deployment path. Do not integrate it into or depend on MyLifeHub or any other project.
+
+==================================================
+1. CORE PRODUCT REQUIREMENTS
+==================================================
+
+Target audiences:
+- Individuals.
+- Households and families.
+- Small businesses.
+
+Primary objective:
+Allow users to securely store, organize, understand, search, retrieve, and manage important documents.
+
+NON-NEGOTIABLE REQUIREMENT:
+THE CORE APPLICATION MUST WORK COMPLETELY OFFLINE.
+
+Normal operation must not require:
+- Internet access.
+- Cloud database.
+- Cloud file storage.
+- Cloud authentication.
+- Remote search service.
+- External notification service.
+
+Use local-first architecture.
+
+The application must continue working when:
+- Internet is disconnected.
+- Gemini API is unavailable.
+- External services fail.
+- The browser is restarted.
+- The installed PWA is opened again.
+
+Gemini AI is an optional online enhancement. Never make the core application dependent on Gemini.
+
+Offline intelligence must use:
+- Local PDF text extraction.
+- Local OCR.
+- Rule-based document classification.
+- Deterministic metadata extraction where possible.
+- Local search.
+- Local expiry calculations.
+- Local reminders and reports.
+
+Gemini must be used only after an explicit user action and consent to send selected content to an online AI service.
+
+Do not falsely advertise cloud Gemini as offline AI.
+
+==================================================
+2. TECHNOLOGY STACK
+==================================================
+
+Frontend:
+- React.
+- TypeScript.
+- Vite-compatible project structure.
+- Tailwind CSS.
+- shadcn/ui or equivalent accessible components.
+- Lucide icons.
+
+Application:
+- Installable Progressive Web App.
+- Service worker.
+- Web App Manifest.
+- Offline application shell.
+- Responsive mobile, tablet, and desktop UI.
+
+Local persistence:
+- IndexedDB.
+- Dexie.js for structured local data.
+- OPFS for local file storage when supported.
+- IndexedDB Blob storage fallback.
+- Versioned database migrations.
+
+Documents:
+- PDF.js for PDF rendering and text extraction.
+- Tesseract.js for local OCR.
+- Web Workers for heavy processing.
+- File hashing using Web Crypto.
+
+Security:
+- Web Crypto API.
+- AES-GCM encryption.
+- Password-derived key wrapping.
+- Vetted password KDF implementation.
+- No plaintext password storage.
+- No exposed API keys.
+- Explicit lock and unlock flow.
+
+AI:
+- Gemini API through server-side integration only.
+- Use a supported current Gemini model.
+- Keep the integration behind an AI service abstraction.
+- Never put Gemini API keys in client-side code.
+- Use server-side secrets in AI Studio.
+- If Gemini is not configured, show an informative unavailable state.
+
+Do not use Firebase, Firestore, Firebase Storage, or cloud authentication for the offline core.
+
+Avoid unnecessary external dependencies.
+
+==================================================
+3. PRODUCT DESIGN AND BRANDING
+==================================================
+
+Brand:
+DOCUMIND
+
+Tagline:
+Your Documents. Organized. Understood. Always Accessible.
+
+Design direction:
+Premium, elegant, minimal, professional, modern, and trustworthy.
+
+Create a polished commercial software interface, not a generic admin template.
+
+Visual system:
+- Deep navy / charcoal foundation.
+- Refined blue and violet accents.
+- Clean neutral surfaces.
+- Subtle gradients.
+- Elegant shadows.
+- Consistent spacing.
+- Rounded but professional cards.
+- Excellent typography.
+- Smooth, restrained transitions.
+- Clear visual hierarchy.
+- High-quality empty states.
+- Thoughtful loading and error states.
+
+Offer both dark and light themes.
+
+The interface must feel like a premium document intelligence product.
+
+Responsive requirements:
+- Desktop sidebar navigation.
+- Tablet adaptive layout.
+- Mobile navigation.
+- Touch-friendly controls.
+- No horizontal overflow.
+- Accessible contrast and keyboard navigation.
+
+Create a consistent design system with reusable components.
+
+==================================================
+4. APPLICATION NAVIGATION
+==================================================
+
+Create the following navigation:
+
+1. Dashboard.
+2. My Documents.
+   - All Documents.
+   - Recent.
+   - Favorites.
+   - Shared with Me.
+   - Archived.
+   - Trash.
+3. Categories.
+   - Identity.
+   - Education.
+   - Employment.
+   - Finance.
+   - Insurance.
+   - Property.
+   - Vehicle.
+   - Business.
+   - Other.
+4. AI Intelligence.
+   - Document Assistant.
+   - OCR and Extraction.
+   - Summaries.
+   - Processing Queue.
+5. Smart Search.
+6. Reminders.
+7. Document Timeline.
+8. Relationships.
+9. Reports and Document Health.
+10. Workspace and Members.
+11. Settings.
+   - Profile.
+   - Privacy and Security.
+   - Offline Storage.
+   - Backup and Restore.
+   - AI Preferences.
+   - About.
+
+Every navigation item must open a real working page.
+Do not create dead links or decorative buttons.
+
+==================================================
+5. ONBOARDING AND LOCAL USER SETUP
+==================================================
+
+Build a first-run onboarding flow.
+
+Explain:
+- Documents stay on the user's device or configured private local server.
+- Core features work offline.
+- Gemini is optional and requires internet.
+- Local backups are the user's responsibility unless a backup destination is configured.
+
+Allow the user to:
+- Create a local profile.
+- Choose Personal, Household, or Business workspace.
+- Set a workspace name.
+- Set a local unlock password.
+- Configure automatic locking.
+- Choose default document categories.
+- Configure reminder preferences.
+- Skip optional AI setup.
+
+Do not force cloud sign-in.
+
+Implement a proper local lock/unlock experience.
+
+Do not pretend that a client-side local profile is a secure remote identity system.
+
+==================================================
+6. DASHBOARD
+==================================================
+
+Create a premium dashboard with:
+
+- Total documents.
+- Total storage used.
+- Recent documents.
+- Documents by category.
+- Upcoming expiries.
+- Expired documents.
+- Documents requiring verification.
+- OCR processing queue.
+- Recent activity.
+- Document health score with transparent calculation.
+- Quick upload.
+- Smart search.
+- Create folder.
+- Create reminder.
+
+Use real values derived from local database records.
+
+Use useful empty states for a new workspace.
+
+Do not use fake static analytics or fabricated document counts.
+
+==================================================
+7. DOCUMENT VAULT
+==================================================
+
+Implement a functional document manager.
+
+Supported initial formats:
+- PDF.
+- JPG.
+- JPEG.
+- PNG.
+- TXT.
+- DOCX where reliable offline text extraction is available.
+
+For unsupported formats, allow storage only when safe and clearly mark preview/extraction as unavailable.
+
+Features:
+- Drag and drop upload.
+- File picker.
+- Multiple file uploads.
+- File validation.
+- Size limits configurable in settings.
+- File hash calculation.
+- Duplicate detection.
+- Local file persistence.
+- Document preview.
+- Download.
+- Rename.
+- Move between folders.
+- Add tags.
+- Assign category.
+- Add description.
+- Favorite.
+- Archive.
+- Restore.
+- Trash.
+- Permanent delete with confirmation.
+- Version history.
+
+Store actual file bytes in local file storage.
+Do not store large file contents directly in metadata records.
+
+Show upload and processing progress.
+
+Handle interrupted uploads and storage quota errors safely.
+
+==================================================
+8. DOCUMENT PROCESSING AND OCR
+==================================================
+
+Create a real local processing pipeline.
+
+For each uploaded document:
+
+1. Validate its file signature and MIME type.
+2. Calculate a file hash.
+3. Detect duplicates.
+4. Save the document locally.
+5. Extract selectable PDF text using PDF.js.
+6. If text is insufficient, run local OCR.
+7. Run rule-based document classification.
+8. Extract candidate metadata.
+9. Store extracted text locally.
+10. Show the user a review screen.
+11. Allow editing and confirmation.
+12. Update search index and timeline.
+
+Use Tesseract.js locally.
+
+Use Web Workers for OCR and other heavy processing.
+
+Never block the main UI thread during large document processing.
+
+Show:
+- Queued.
+- Processing.
+- OCR in progress.
+- Extracting.
+- Review required.
+- Completed.
+- Failed.
+
+Provide retry and cancel actions.
+
+For every extracted field, record:
+- Field name.
+- Extracted value.
+- Confidence when available.
+- Source page or location when available.
+- Verification status.
+- Creation timestamp.
+
+AI-extracted fields must default to unverified.
+
+Never mark extracted values as verified automatically.
+
+==================================================
+9. LOCAL DOCUMENT CLASSIFICATION
+==================================================
+
+Implement deterministic rule-based classification.
+
+Initial document types:
+- Identity document.
+- Education certificate.
+- Employment document.
+- Invoice.
+- Receipt.
+- Insurance policy.
+- Vehicle document.
+- Property document.
+- Contract.
+- Business licence.
+- Tax document.
+- Medical document.
+- Other.
+
+Use filenames, extracted keywords, date patterns, and configurable rules.
+
+Classification must be editable by the user.
+
+Do not pretend keyword matching is a machine-learning model.
+
+Build the classification service so an AI classifier can be added later.
+
+==================================================
+10. DOCUMENT METADATA
+==================================================
+
+Support fields such as:
+
+- Document title.
+- Document type.
+- Issuer.
+- Owner.
+- Reference number.
+- Issue date.
+- Expiry date.
+- Amount.
+- Currency.
+- Address.
+- Related person.
+- Related organization.
+- Description.
+- Notes.
+- Tags.
+- Verification status.
+
+Only show fields relevant to the document type.
+
+Allow custom metadata fields.
+
+Provide a review screen with extracted values and source references.
+
+==================================================
+11. SMART SEARCH
+==================================================
+
+Build local search.
+
+Search across:
+- Document titles.
+- Original filenames.
+- Categories.
+- Tags.
+- Descriptions.
+- Extracted text.
+- Metadata.
+- Reference numbers.
+
+Provide:
+- Keyword search.
+- Filters.
+- Date range.
+- Category filter.
+- Document type filter.
+- Verification filter.
+- Expiry status filter.
+- Search result snippets.
+- Highlighted matching terms.
+- Sorting.
+
+Build a local search index.
+Do not assume IndexedDB itself provides full-text search.
+
+For large datasets, use an appropriate local indexing strategy.
+
+Natural-language search must have a deterministic offline fallback for supported patterns.
+
+If a query requires Gemini, clearly indicate that internet is required.
+
+==================================================
+12. REMINDER ENGINE
+==================================================
+
+Implement a local rule-based reminder system.
+
+Support:
+- Document expiry.
+- Renewal dates.
+- Custom dates.
+- Contract milestones.
+- Warranty expiry.
+- Licence expiry.
+- User-defined events.
+
+Allow reminder intervals such as:
+- 90 days.
+- 60 days.
+- 30 days.
+- 14 days.
+- 7 days.
+- 1 day.
+- Custom interval.
+
+Features:
+- Upcoming reminders.
+- Overdue reminders.
+- Completed reminders.
+- Snooze.
+- Mark complete.
+- Edit.
+- Delete.
+- Reminder history.
+
+Calculate reminder state locally.
+
+Use browser notifications only when supported and permission is granted.
+
+Never claim guaranteed background notifications when the browser is closed.
+
+Provide in-app reminders on every supported device.
+
+==================================================
+13. DOCUMENT TIMELINE AND RELATIONSHIPS
+==================================================
+
+Create a chronological document timeline.
+
+Show:
+- Upload dates.
+- Issue dates.
+- Expiry dates.
+- Renewal dates.
+- Version changes.
+- Reminder completion.
+- Important document events.
+
+Implement document relationships.
+
+Relationship types:
+- Invoice belongs to asset.
+- Warranty belongs to purchase.
+- Insurance covers asset.
+- Contract relates to organization.
+- Renewal replaces previous document.
+- Certificate supports application.
+- Custom relationship.
+
+Allow users to create, edit, and remove relationships.
+
+==================================================
+14. GEMINI AI INTEGRATION
+==================================================
+
+Gemini is optional and online-only.
+
+Create an AI service abstraction.
+
+Features:
+- Document summary.
+- Key-point extraction.
+- Structured metadata suggestions.
+- Ask questions about selected documents.
+- Compare selected document versions.
+- Explain document terminology in plain language.
+
+Privacy flow:
+1. User selects an AI action.
+2. Display a notice that selected text will be sent to an online AI service.
+3. Explain what content will be transmitted.
+4. Obtain explicit user approval.
+5. Send only the minimum necessary extracted text.
+6. Validate Gemini's structured response.
+7. Display results with source references where possible.
+8. Require user confirmation before saving extracted fields.
+
+Never give Gemini direct unrestricted access to the database or filesystem.
+
+Treat document contents as untrusted input.
+Instructions embedded inside a document must not override system instructions or authorize access to other documents.
+
+Do not send entire document collections to Gemini.
+
+Add:
+- AI enabled/disabled preference.
+- AI request loading states.
+- Usage limits.
+- Error handling.
+- Retry.
+- Timeout handling.
+- Offline unavailable state.
+
+If no API key is configured, all offline features must continue working.
+
+Do not expose API keys in browser bundles, local storage, logs, or client network requests.
+
+==================================================
+15. DATABASE AND DATA MODEL
+==================================================
+
+Implement a versioned Dexie database.
+
+Create stores for:
+
+users:
+id, displayName, createdAt
+
+workspaces:
+id, name, type, createdAt, updatedAt
+
+workspaceMembers:
+id, workspaceId, userId, role
+
+folders:
+id, workspaceId, parentId, name, createdAt
+
+documents:
+id, workspaceId, folderId, title, originalFileName,
+mimeType, fileSize, fileHash, storageKey, categoryId,
+documentType, issueDate, expiryDate, processingStatus,
+verificationStatus, createdAt, updatedAt, archivedAt, deletedAt
+
+documentVersions:
+id, documentId, versionNumber, storageKey, fileHash, createdAt
+
+documentText:
+id, documentId, extractedText, extractionStatus, language
+
+documentFields:
+id, documentId, fieldName, fieldValue, confidence,
+sourcePage, verificationStatus, updatedAt
+
+categories:
+id, workspaceId, name, color
+
+tags:
+id, workspaceId, name
+
+documentTags:
+documentId, tagId
+
+reminders:
+id, documentId, eventDate, remindBeforeDays,
+status, completedAt, createdAt
+
+relationships:
+id, sourceDocumentId, targetDocumentId,
+relationshipType, createdAt
+
+processingJobs:
+id, documentId, jobType, status, progress,
+errorMessage, createdAt, updatedAt
+
+activityLogs:
+id, workspaceId, userId, action, targetId, timestamp
+
+settings:
+id, workspaceId, key, value
+
+backups:
+id, createdAt, backupPath, checksum, status
+
+Create indexes for frequent queries.
+
+Use stable UUID identifiers.
+
+Implement database version migrations.
+
+Keep large blobs outside structured metadata records.
+
+Do not hardcode sample documents into the production database.
+
+Use seed data only in a clearly labeled demo mode.
+
+==================================================
+16. LOCAL SECURITY
+==================================================
+
+Implement:
+- AES-GCM encryption for sensitive local data.
+- Secure key generation.
+- Password-derived key wrapping.
+- No plaintext password storage.
+- Automatic lock after configurable inactivity.
+- Manual lock.
+- Key clearing on lock.
+- File type and file size validation.
+- File signature validation.
+- Safe file preview.
+- Safe filename handling.
+- Backup encryption.
+- Permanent deletion confirmation.
+- Workspace isolation.
+- Audit history.
+
+Do not claim end-to-end encryption unless it is actually implemented and independently reviewed.
+
+Do not claim protection against a compromised operating system or browser.
+
+Use secure random values for identifiers and cryptographic keys.
+
+Provide a clear warning that browser site-data deletion can remove local files and metadata if the user has not exported a backup.
+
+==================================================
+17. BACKUP AND RESTORE
+==================================================
+
+Implement:
+- Full workspace export.
+- Encrypted backup package.
+- Backup manifest.
+- File checksums.
+- Backup verification.
+- Restore workflow.
+- Restore preview.
+- Duplicate handling.
+- Backup history.
+- Export all documents.
+- Export metadata as JSON or CSV.
+
+Never silently overwrite existing user data during restore.
+
+Provide clear instructions and warnings.
+
+==================================================
+18. OFFLINE PWA REQUIREMENTS
+==================================================
+
+Implement:
+- Web app manifest.
+- Service worker.
+- Install prompt when supported.
+- Offline application shell.
+- Cache versioning.
+- Cache update strategy.
+- Offline status indicator.
+- Local database persistence.
+- Local document persistence.
+- Retryable processing queue.
+
+Do not cache private document files in a generic shared HTTP cache.
+
+Do not cache AI responses containing private information in public caches.
+
+When internet is unavailable:
+- Dashboard must work.
+- Documents must work.
+- Upload must work.
+- OCR must work.
+- Search must work.
+- Reminders must work.
+- Reports must work.
+- Settings must work.
+
+Only online Gemini operations should be unavailable.
+
+==================================================
+19. FUTURE LOCAL LAN ARCHITECTURE
+==================================================
+
+Prepare clean service interfaces for a future local server.
+
+Future LAN mode must support:
+- One private local server.
+- Multiple devices.
+- Local authentication.
+- Household and business workspaces.
+- Role-based access.
+- Shared documents.
+- Local database.
+- Private filesystem storage.
+- Conflict detection.
+- Audit logs.
+- Backup and restore.
+
+The LAN server must not require internet.
+
+Do not falsely implement multi-device sharing by pretending IndexedDB is shared.
+
+For the first release, implement personal-device mode fully.
+Prepare interfaces and documentation for LAN mode.
+Do not build a fake LAN sharing screen.
+
+==================================================
+20. USER EXPERIENCE REQUIREMENTS
+==================================================
+
+All major actions must work.
+
+Include:
+- Loading indicators.
+- Empty states.
+- Error messages.
+- Success messages.
+- Confirmation dialogs.
+- Toast notifications.
+- Keyboard accessibility.
+- Form validation.
+- Responsive layouts.
+- Search loading state.
+- OCR processing state.
+- Offline state.
+- Storage quota warnings.
+- AI consent dialog.
+- Backup progress.
+
+Avoid:
+- Dead buttons.
+- Fake charts.
+- Fake document records.
+- Placeholder-only pages.
+- Unimplemented menu items.
+- Random sample values presented as real user data.
+
+==================================================
+21. TESTING REQUIREMENTS
+==================================================
+
+Write tests for:
+- Database operations.
+- Schema migrations.
+- File uploads.
+- Duplicate detection.
+- Encryption and decryption.
+- PDF text extraction.
+- OCR processing.
+- Metadata validation.
+- Search.
+- Expiry calculations.
+- Reminder generation.
+- Backup and restore.
+- Workspace isolation.
+- Offline behavior.
+- Gemini unavailable behavior.
+
+Test large documents and corrupted files.
+
+Test refresh, restart, and offline reopening.
+
+Test that no Gemini request occurs without explicit user approval.
+
+Test that a failed Gemini request cannot damage or block local records.
+
+==================================================
+22. PROJECT STRUCTURE
+==================================================
+
+Use a clean modular structure similar to:
+
+src/
+  app/
+  components/
+  pages/
+  layouts/
+  features/
+    auth/
+    onboarding/
+    dashboard/
+    documents/
+    folders/
+    categories/
+    processing/
+    ocr/
+    extraction/
+    search/
+    reminders/
+    timeline/
+    relationships/
+    reports/
+    workspaces/
+    backups/
+    settings/
+    ai/
+  services/
+    database/
+    storage/
+    encryption/
+    pdf/
+    ocr/
+    classification/
+    search/
+    reminders/
+    backup/
+    ai/
+  hooks/
+  workers/
+  types/
+  utils/
+  styles/
+
+public/
+  icons/
+  manifest.webmanifest/
+
+tests/
+  unit/
+  integration/
+  e2e/
+
+Use reusable components and clear TypeScript interfaces.
+
+Keep business logic outside UI components.
+
+Use dependency injection or service interfaces where useful so storage, OCR, AI, and future LAN services can be replaced independently.
+
+==================================================
+23. IMPLEMENTATION STRATEGY
+==================================================
+
+Build the application in a reliable order:
+
+Stage 1:
+- Project foundation.
+- Design system.
+- Responsive layout.
+- Navigation.
+- Onboarding.
+- Local database.
+- PWA foundation.
+
+Stage 2:
+- Local file storage.
+- Document vault.
+- Folders.
+- Categories.
+- Preview and download.
+- Duplicate detection.
+
+Stage 3:
+- PDF extraction.
+- Offline OCR.
+- Processing queue.
+- Classification.
+- Metadata extraction.
+- Verification screen.
+
+Stage 4:
+- Local search index.
+- Search filters.
+- Reminders.
+- Timeline.
+- Reports.
+
+Stage 5:
+- Gemini integration.
+- AI consent.
+- Summary.
+- Q&A.
+- Structured extraction.
+
+Stage 6:
+- Encryption.
+- Backup and restore.
+- Audit logs.
+- Advanced workspace capabilities.
+
+Stage 7:
+- LAN-ready service interfaces.
+- Comprehensive testing.
+- Performance and security hardening.
+
+Do not skip earlier foundations to create superficial later features.
+
+==================================================
+24. BUILD AND VERIFICATION RULES
+==================================================
+
+Do not stop after generating a visually attractive prototype.
+
+Implement working functionality using real local persistence.
+
+Before finishing:
+- Run the available build command.
+- Resolve TypeScript errors.
+- Resolve import errors.
+- Resolve runtime errors.
+- Test all routes.
+- Test upload and preview.
+- Test local database persistence.
+- Test offline reopening.
+- Test PDF extraction.
+- Test OCR where supported.
+- Test search.
+- Test reminders.
+- Test backup and restore.
+- Test Gemini-disabled mode.
+- Test responsive layouts.
+
+Do not fabricate test results.
+If a feature cannot be completed in the current build, clearly document the limitation and leave a clean, functional implementation boundary.
+
+Maintain a README with:
+- Project overview.
+- Technology stack.
+- Setup instructions.
+- Offline behavior.
+- Data storage details.
+- Security limitations.
+- Backup and restore instructions.
+- AI configuration.
+- Test commands.
+- Future LAN deployment plan.
+
+==================================================
+25. FINAL EXPECTED RESULT
+==================================================
+
+Deliver a polished, functional, offline-first DocuMind PWA.
+
+The finished first release must allow a user to:
+1. Set up a local workspace.
+2. Upload and store documents locally.
+3. View and manage documents.
+4. Organize documents into folders and categories.
+5. Extract text from PDFs.
+6. Run offline OCR on supported scanned files.
+7. Review and verify extracted metadata.
+8. Search locally across documents.
+9. Set and manage expiry reminders.
+10. View a document timeline.
+11. Generate local document health reports.
+12. Export and restore a workspace backup.
+13. Use Gemini optionally when online and explicitly approved.
+14. Continue all core document workflows without internet.
+
+Prioritize correctness, privacy, data integrity, reliability, accessibility, and user experience.
+
+Build a genuine product, not a demo dashboard.
+
+Start by creating the complete project foundation and implementing the first functional stages. Continue through the requirements in order, verify each stage, and preserve all working features when making later changes.
