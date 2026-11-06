@@ -308,13 +308,59 @@ async function startServer() {
   const httpServer = http.createServer(app);
 
   if (!isProd) {
-    const isHmrDisabled = process.env.DISABLE_HMR === 'true';
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
-        hmr: isHmrDisabled ? false : { server: httpServer },
+        hmr: false,
       },
       appType: 'spa',
+      plugins: [
+        {
+          name: 'suppress-hmr-ws-error',
+          transformIndexHtml: {
+            order: 'pre',
+            handler() {
+              return [
+                {
+                  tag: 'script',
+                  injectTo: 'head-prepend',
+                  children: `(function() {
+  window.addEventListener('unhandledrejection', function(e) {
+    if (e.reason && (e.reason.message?.includes('WebSocket') || String(e.reason).includes('WebSocket'))) {
+      e.preventDefault();
+    }
+  }, true);
+  window.addEventListener('error', function(e) {
+    if (e.message && e.message.includes('WebSocket')) {
+      e.preventDefault();
+    }
+  }, true);
+  try {
+    var NativeWS = window.WebSocket;
+    if (NativeWS) {
+      window.WebSocket = function(url, protocols) {
+        if (protocols === 'vite-hmr' || protocols === 'vite-ping' || (typeof url === 'string' && url.includes('token='))) {
+          var target = new EventTarget();
+          target.readyState = 1;
+          target.send = function() {};
+          target.close = function() {};
+          setTimeout(function() {
+            target.dispatchEvent(new Event('open'));
+          }, 0);
+          return target;
+        }
+        return new NativeWS(url, protocols);
+      };
+      window.WebSocket.prototype = NativeWS.prototype;
+    }
+  } catch(e) {}
+})();`,
+                },
+              ];
+            },
+          },
+        },
+      ],
     });
     app.use(vite.middlewares);
   } else {

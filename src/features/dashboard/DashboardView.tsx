@@ -16,6 +16,9 @@ import {
   FolderPlus,
   RefreshCw,
   ChevronRight,
+  FileEdit,
+  FilePlus2,
+  ExternalLink,
 } from 'lucide-react';
 import { db } from '../../services/database/db';
 import { FileStorageService } from '../../services/storage/fileStorage';
@@ -108,6 +111,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const reviewRequiredDocs = documents.filter((d) => d.processingStatus === 'review_required');
   const recentDocs = documents.slice(0, 6);
+
+  // Last 5 documents added or modified by the user
+  const recentActivityDocs = [...documents]
+    .sort((a, b) => {
+      const timeA = new Date(a.updatedAt || a.createdAt).getTime();
+      const timeB = new Date(b.updatedAt || b.createdAt).getTime();
+      return timeB - timeA;
+    })
+    .slice(0, 5);
+
+  const getRelativeTime = (isoString?: string) => {
+    if (!isoString) return 'recently';
+    const diff = Date.now() - new Date(isoString).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+    return new Date(isoString).toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
 
   if (isLoading) {
     return (
@@ -351,8 +376,84 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {/* Right Column (1 Col): Upcoming Reminders & Health Audit Breakdown */}
+        {/* Right Column (1 Col): Recent Activity Feed + Reminders & Audit */}
         <div className="space-y-4">
+          {/* Recent Activity Feed: Last 5 documents added or modified by user */}
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div className="font-semibold text-xs text-slate-900 dark:text-white flex items-center gap-2">
+                <Activity className="w-3.5 h-3.5 text-blue-500" />
+                <span>Recent Activity</span>
+              </div>
+              <span className="text-[10px] font-mono text-slate-400">
+                5 latest changes
+              </span>
+            </div>
+
+            <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+              {recentActivityDocs.length === 0 ? (
+                <div className="p-6 text-center text-slate-400 text-[11px]">
+                  No recent document activity recorded.
+                </div>
+              ) : (
+                recentActivityDocs.map((doc) => {
+                  const isModified = Boolean(doc.updatedAt && doc.updatedAt !== doc.createdAt);
+                  const activityDate = doc.updatedAt || doc.createdAt;
+                  return (
+                    <div
+                      key={doc.id}
+                      onClick={() => onSelectDocument(doc)}
+                      className="p-3 hover:bg-slate-50 dark:hover:bg-slate-850/50 cursor-pointer transition-colors flex items-center justify-between gap-3 group"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div
+                          className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                            isModified
+                              ? 'bg-indigo-500/10 text-indigo-500 dark:text-indigo-400'
+                              : 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400'
+                          }`}
+                        >
+                          {isModified ? (
+                            <FileEdit className="w-3.5 h-3.5" />
+                          ) : (
+                            <FilePlus2 className="w-3.5 h-3.5" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-medium text-slate-900 dark:text-slate-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                            {doc.title}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5">
+                            <span
+                              className={`font-medium ${
+                                isModified
+                                  ? 'text-indigo-600 dark:text-indigo-400'
+                                  : 'text-emerald-600 dark:text-emerald-400'
+                              }`}
+                            >
+                              {isModified ? 'Modified' : 'Added'}
+                            </span>
+                            <span aria-hidden="true">·</span>
+                            <span className="truncate">{doc.documentType}</span>
+                            <span aria-hidden="true">·</span>
+                            <span className="truncate">{catMap.get(doc.categoryId) || 'Other'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0 text-right">
+                        <span className="font-mono text-[10px] text-slate-400 tabular-nums">
+                          {getRelativeTime(activityDate)}
+                        </span>
+                        <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
           {/* Reminders Card */}
           <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
             <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
