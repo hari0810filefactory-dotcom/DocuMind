@@ -74,6 +74,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [restorePreview, setRestorePreview] = useState<any | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
   const [restoreSuccess, setRestoreSuccess] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
 
   // AI settings
   const [aiEnabled, setAiEnabled] = useState(true);
@@ -161,8 +163,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
       const backups = await db.backups.where('workspaceId').equals(workspace.id).reverse().toArray();
       setBackupHistory(backups);
+      setExportError(null);
     } catch (err: any) {
-      alert(`Export failed: ${err.message || 'unknown error'}`);
+      setExportError(`Export failed: ${err.message || 'unknown error'}`);
     } finally {
       setIsExporting(false);
     }
@@ -184,10 +187,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       setRestoreSuccess(
         `Successfully restored ${result.restoredDocs} documents (${result.skippedDuplicates} duplicates skipped).`
       );
+      setRestoreError(null);
       setRestorePreview(null);
       setRestoreFile(null);
     } catch (err: any) {
-      alert(`Restore failed: ${err.message}`);
+      setRestoreError(`Restore failed: ${err.message}`);
     } finally {
       setIsRestoring(false);
     }
@@ -462,57 +466,174 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       {activeTab === 'backup' && (
         <div className="max-w-2xl space-y-6">
           {/* Export Section */}
-          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs space-y-4 text-xs">
-            <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
-              <Download className="w-4 h-4 text-blue-500" />
-              <span>Export Full Workspace Package</span>
-            </h3>
-            <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
-              Creates a self-contained ZIP archive containing all document files, versions, categories, OCR text, and cryptographic checksums.
-            </p>
-
-            <div className="space-y-3">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs space-y-5 text-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
-                <label className="block text-slate-600 dark:text-slate-400 font-medium mb-1">
-                  Package Encryption Password (Optional)
+                <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5 text-sm">
+                  <Download className="w-4 h-4 text-blue-500" />
+                  <span>Export Vault Data &amp; Stored Files</span>
+                </h3>
+                <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5">
+                  Export your document metadata, full-text indexes, and raw binary files directly to local disk.
+                </p>
+              </div>
+              <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 px-2.5 py-1 rounded-md self-start sm:self-auto">
+                {storageEstimate.usedBytes > 0 ? formatBytes(storageEstimate.usedBytes) : 'Local Storage'}
+              </div>
+            </div>
+
+            {/* Export Card 1: Complete Archive (Files + Database ZIP) */}
+            <div className="p-4 rounded-xl border border-blue-100 dark:border-blue-900/30 bg-blue-50/30 dark:bg-blue-950/20 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="font-semibold text-slate-900 dark:text-slate-100 text-xs flex items-center gap-1.5">
+                    <DatabaseBackup className="w-4 h-4 text-blue-500" />
+                    <span>Complete Workspace Archive (.ZIP / .dmbackup)</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Packages all stored file binaries, extracted OCR text, custom fields, categories, and tags into a self-contained archive. Suitable for full restoration or moving to another device.
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-600 dark:text-slate-400 font-medium text-[11px] mb-1">
+                  Optional Encryption Password (AES-256 GCM)
                 </label>
                 <input
                   type="password"
                   value={backupPassword}
                   onChange={(e) => setBackupPassword(e.target.value)}
-                  placeholder="Leave empty for unencrypted ZIP or enter a password for .dmbackup"
-                  className="w-full rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-hidden"
+                  placeholder="Leave blank for open ZIP, or enter password to encrypt as .dmbackup"
+                  className="w-full rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-hidden"
                 />
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="pt-1 flex flex-wrap items-center gap-2">
                 <button
                   onClick={handleExportBackup}
                   disabled={isExporting}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium shadow-xs disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium shadow-xs disabled:opacity-50 transition-colors"
                 >
-                  {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                  <span>{isExporting ? 'Generating Package...' : 'Export Backup File'}</span>
-                </button>
-
-                <button
-                  onClick={async () => {
-                    if (!workspace) return;
-                    const json = await BackupService.exportMetadataJson(workspace.id);
-                    const blob = new Blob([json], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `documind-metadata-${new Date().toISOString().slice(0, 10)}.json`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  }}
-                  className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 font-medium"
-                >
-                  Export Metadata (JSON)
+                  {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                  <span>{isExporting ? 'Packaging Archive...' : 'Download Full Backup (.ZIP)'}</span>
                 </button>
               </div>
             </div>
+
+            {/* Export Grid: Modular Exports (JSON Metadata, Raw Files ZIP, CSV) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Option A: Metadata JSON */}
+              <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 space-y-2 flex flex-col justify-between">
+                <div>
+                  <div className="font-semibold text-slate-900 dark:text-slate-200 flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Metadata (JSON)</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                    Export all document records, custom fields, tags, and classification data in clean JSON.
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!workspace) return;
+                    try {
+                      const json = await BackupService.exportMetadataJson(workspace.id);
+                      const blob = new Blob([json], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `documind-metadata-${new Date().toISOString().slice(0, 10)}.json`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    } catch (err: any) {
+                      setExportError(`JSON Export failed: ${err.message}`);
+                    }
+                  }}
+                  className="w-full flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 font-medium transition-colors"
+                >
+                  <Download className="w-3 h-3 text-slate-400" />
+                  <span>Export JSON</span>
+                </button>
+              </div>
+
+              {/* Option B: Raw Files ZIP */}
+              <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 space-y-2 flex flex-col justify-between">
+                <div>
+                  <div className="font-semibold text-slate-900 dark:text-slate-200 flex items-center gap-1.5">
+                    <HardDrive className="w-3.5 h-3.5 text-indigo-500" />
+                    <span>Stored Files (ZIP)</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                    Export an unencrypted archive of all active stored files with original file names.
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!workspace) return;
+                    setIsExporting(true);
+                    try {
+                      const res = await BackupService.exportRawFilesZip(workspace.id);
+                      const url = URL.createObjectURL(res.blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = res.fileName;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    } catch (err: any) {
+                      setExportError(`Files export failed: ${err.message}`);
+                    } finally {
+                      setIsExporting(false);
+                    }
+                  }}
+                  disabled={isExporting}
+                  className="w-full flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 font-medium transition-colors disabled:opacity-50"
+                >
+                  <Download className="w-3 h-3 text-slate-400" />
+                  <span>Export Files ZIP</span>
+                </button>
+              </div>
+
+              {/* Option C: CSV Spreadsheet */}
+              <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 space-y-2 flex flex-col justify-between">
+                <div>
+                  <div className="font-semibold text-slate-900 dark:text-slate-200 flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>Audit Registry (CSV)</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                    Export a CSV spreadsheet listing all documents, types, dates, file sizes, and SHA-256 hashes.
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!workspace) return;
+                    try {
+                      const csv = await BackupService.exportMetadataCsv(workspace.id);
+                      const blob = new Blob([csv], { type: 'text/csv' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `documind-registry-${new Date().toISOString().slice(0, 10)}.csv`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    } catch (err: any) {
+                      setExportError(`CSV Export failed: ${err.message}`);
+                    }
+                  }}
+                  className="w-full flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 font-medium transition-colors"
+                >
+                  <Download className="w-3 h-3 text-slate-400" />
+                  <span>Export CSV</span>
+                </button>
+              </div>
+            </div>
+
+            {exportError && (
+              <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-medium">
+                {exportError}
+              </div>
+            )}
           </div>
 
           {/* Restore Section */}
@@ -584,6 +705,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <div className="text-rose-500 text-[11px] font-medium">
                   {restorePreview.error}
                 </div>
+              )}
+
+              {restoreError && (
+                <div className="text-rose-500 text-xs font-medium">{restoreError}</div>
               )}
 
               {restoreSuccess && (

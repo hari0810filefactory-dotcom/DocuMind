@@ -310,6 +310,132 @@ export class BackupService {
   }
 
   /**
+   * Export only selected documents and their metadata to a ZIP file
+   */
+  static async exportSelectedDocumentsZip(
+    workspaceId: string,
+    docIds: string[]
+  ): Promise<{ blob: Blob; fileName: string; count: number }> {
+    const zip = new JSZip();
+    const documents = await db.documents
+      .where('id')
+      .anyOf(docIds)
+      .and((d) => d.workspaceId === workspaceId)
+      .toArray();
+
+    if (documents.length === 0) {
+      throw new Error('No documents found for selected IDs.');
+    }
+
+    const categories = await db.categories.where('workspaceId').equals(workspaceId).toArray();
+    const catMap = new Map(categories.map((c) => [c.id, c.name]));
+
+    const textRecords = await db.documentText.where('documentId').anyOf(docIds).toArray();
+    const fieldRecords = await db.documentFields.where('documentId').anyOf(docIds).toArray();
+    const versionRecords = await db.documentVersions.where('documentId').anyOf(docIds).toArray();
+    const docTags = await db.documentTags.where('documentId').anyOf(docIds).toArray();
+
+    const filesFolder = zip.folder('files');
+    const exportedFiles: any[] = [];
+
+    for (const doc of documents) {
+      const fileBlob = await FileStorageService.getFile(doc.storageKey, doc.mimeType);
+      if (fileBlob && filesFolder) {
+        const buffer = await fileBlob.arrayBuffer();
+        // Use sanitized original filename or storage key to avoid collisions
+        const safeName = `${doc.id.slice(0, 8)}_${doc.originalFileName.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+        filesFolder.file(safeName, buffer);
+        exportedFiles.push({
+          id: doc.id,
+          title: doc.title,
+          originalFileName: doc.originalFileName,
+          archivePath: `files/${safeName}`,
+          fileSize: doc.fileSize,
+          mimeType: doc.mimeType,
+          fileHash: doc.fileHash,
+          category: catMap.get(doc.categoryId) || 'Other',
+          documentType: doc.documentType,
+          issueDate: doc.issueDate,
+          expiryDate: doc.expiryDate,
+        });
+      }
+    }
+
+    const manifest = {
+      version: 1,
+      appName: 'DocuMind',
+      exportType: 'batch_selection',
+      exportedAt: new Date().toISOString(),
+      workspaceId,
+      documentCount: documents.length,
+      documents: exportedFiles,
+      textRecords,
+      fieldRecords,
+      versionRecords,
+      docTags,
+    };
+
+    zip.file('metadata.json', JSON.stringify(manifest, null, 2));
+
+    const zipBuffer = await zip.generateAsync({
+      type: 'arraybuffer',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 6 },
+    });
+
+    const dateStamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const fileName = `documind-selection-${documents.length}-docs-${dateStamp}.zip`;
+    const blob = new Blob([zipBuffer], { type: 'application/zip' });
+
+    await logActivity(
+      workspaceId,
+      'user',
+      'Exported batch selected documents',
+      workspaceId,
+      `Exported ${documents.length} document(s)`
+    );
+
+    return { blob, fileName, count: documents.length };
+  }
+
+  /**
+   * Export all raw document files in original names into a ZIP
+   */
+  static async exportRawFilesZip(
+    workspaceId: string
+  ): Promise<{ blob: Blob; fileName: string; count: number }> {
+    const zip = new JSZip();
+    const documents = await db.documents
+      .where('workspaceId')
+      .equals(workspaceId)
+      .and((d) => !d.isDeleted)
+      .toArray();
+
+    let packedCount = 0;
+    for (const doc of documents) {
+      const fileBlob = await FileStorageService.getFile(doc.storageKey, doc.mimeType);
+      if (fileBlob) {
+        const buffer = await fileBlob.arrayBuffer();
+        const safeName = `${doc.id.slice(0, 6)}_${doc.originalFileName.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+        zip.file(safeName, buffer);
+        packedCount++;
+      }
+    }
+
+    const zipBuffer = await zip.generateAsync({
+      type: 'arraybuffer',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 6 },
+    });
+
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    const fileName = `documind-raw-files-${dateStamp}.zip`;
+    const blob = new Blob([zipBuffer], { type: 'application/zip' });
+
+    return { blob, fileName, count: packedCount };
+  }
+
+  /**
    * Export metadata as CSV
    */
   static async exportMetadataCsv(workspaceId: string): Promise<string> {
@@ -353,18 +479,30 @@ export class BackupService {
    */
   static async exportMetadataJson(workspaceId: string): Promise<string> {
     const docs = await db.documents.where('workspaceId').equals(workspaceId).toArray();
-    const fields = await db.documentFields.toArray();
-    const textRecords = await db.documentText.toArray();
+    const docIds = docs.map((d) => d.id);
+    const fields = await db.documentFields.where('documentId').anyOf(docIds).toArray();
+    const textRecords = await db.documentText.where('documentId').anyOf(docIds).toArray();
     const categories = await db.categories.where('workspaceId').equals(workspaceId).toArray();
+    const reminders = await db.reminders.where('workspaceId').equals(workspaceId).toArray();
+    const relationships = await db.relationships.where('workspaceId').equals(workspaceId).toArray();
 
     return JSON.stringify(
       {
+        appName: 'DocuMind',
+        version: 1,
         exportedAt: new Date().toISOString(),
         workspaceId,
+        summary: {
+          totalDocuments: docs.length,
+          categoriesCount: categories.length,
+          remindersCount: reminders.length,
+        },
         documents: docs,
         categories,
         fields,
         textRecords,
+        reminders,
+        relationships,
       },
       null,
       2

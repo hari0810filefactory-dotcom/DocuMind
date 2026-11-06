@@ -21,6 +21,7 @@ interface TopBarProps {
   onLockVault: () => void;
   isVaultConfigured: boolean;
   onNavigateToSearch: () => void;
+  onOpenCommandPalette?: () => void;
   onToggleMobileSidebar: () => void;
   activeNavTitle: string;
 }
@@ -33,6 +34,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   onLockVault,
   isVaultConfigured,
   onNavigateToSearch,
+  onOpenCommandPalette,
   onToggleMobileSidebar,
   activeNavTitle,
 }) => {
@@ -122,15 +124,15 @@ export const TopBar: React.FC<TopBarProps> = ({
         </span>
       </div>
 
-      {/* Zone 2: Quick Search Input */}
+      {/* Zone 2: Quick Search / Command Palette Input */}
       <div className="hidden lg:flex items-center flex-1 max-w-md mx-4">
         <button
-          onClick={onNavigateToSearch}
+          onClick={onOpenCommandPalette || onNavigateToSearch}
           className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 text-xs text-slate-400 hover:border-slate-300 dark:hover:border-slate-600 transition-all text-left"
         >
           <div className="flex items-center gap-2">
             <Search className="w-3.5 h-3.5 text-slate-400" />
-            <span>Search documents, extracted text, metadata...</span>
+            <span>Search commands, documents, sections...</span>
           </div>
           <kbd className="font-mono text-[10px] bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-300">
             Ctrl+K

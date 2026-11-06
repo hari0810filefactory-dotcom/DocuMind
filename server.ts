@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import http from 'http';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import path from 'path';
@@ -304,10 +305,15 @@ Highlight:
 // Mount Vite or serve static assets
 async function startServer() {
   const isProd = process.env.NODE_ENV === 'production';
+  const httpServer = http.createServer(app);
 
   if (!isProd) {
+    const isHmrDisabled = process.env.DISABLE_HMR === 'true';
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: isHmrDisabled ? false : { server: httpServer },
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);
@@ -319,7 +325,7 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`DocuMind server running on http://0.0.0.0:${PORT}`);
   });
 }

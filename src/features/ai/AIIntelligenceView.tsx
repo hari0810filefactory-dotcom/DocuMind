@@ -128,7 +128,13 @@ export const AIIntelligenceView: React.FC<AIIntelligenceViewProps> = ({
   // Request consent wrapper
   const triggerWithConsent = (title: string, action: () => Promise<void>) => {
     if (!isOnline) {
-      alert('Offline Mode: Gemini AI features require an internet connection.');
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          text: 'Offline Mode: Gemini AI features require an internet connection. Core local document storage, classification, and OCR are unaffected.',
+        },
+      ]);
       return;
     }
     setConsentActionTitle(title);

@@ -19,6 +19,7 @@ import { WorkspaceMembersView } from './features/workspaces/WorkspaceMembersView
 import { SettingsView } from './features/settings/SettingsView';
 import { UploadModal } from './features/documents/UploadModal';
 import { DocumentPreviewDrawer } from './features/documents/DocumentPreviewDrawer';
+import { CommandPalette } from './components/common/CommandPalette';
 import { db } from './services/database/db';
 import type { DocumentRecord } from './types';
 
@@ -53,6 +54,7 @@ export default function App() {
 
   // Modals & Drawers
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<DocumentRecord | null>(null);
 
   // Real document counts for sidebar
@@ -98,13 +100,12 @@ export default function App() {
     loadCounts();
   }, [loadCounts]);
 
-  // Keyboard shortcut Ctrl+K / Cmd+K for search
+  // Global keyboard shortcut Ctrl+K / Cmd+K for Command Palette
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        setActiveSection('search');
-        setSubSection('query');
+        setIsCommandPaletteOpen((prev) => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -200,6 +201,7 @@ export default function App() {
             setActiveSection('search');
             setSubSection('query');
           }}
+          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
           onToggleMobileSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
           activeNavTitle={getSectionTitle()}
         />
@@ -323,6 +325,29 @@ export default function App() {
           loadCounts();
           setIsUploadModalOpen(false);
         }}
+      />
+
+      {/* Global Command Palette (Ctrl+K / Cmd+K) */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onNavigate={(section, sub) => {
+          handleNavigate(section, sub);
+          setIsCommandPaletteOpen(false);
+        }}
+        onOpenUpload={() => {
+          setIsCommandPaletteOpen(false);
+          setIsUploadModalOpen(true);
+        }}
+        onLockVault={() => {
+          setIsCommandPaletteOpen(false);
+          lockVault();
+        }}
+        onSelectDocument={(doc) => {
+          setIsCommandPaletteOpen(false);
+          setSelectedDoc(doc);
+        }}
+        workspaceId={workspace.id}
       />
 
       {/* Offline Connectivity Notification Banner */}
